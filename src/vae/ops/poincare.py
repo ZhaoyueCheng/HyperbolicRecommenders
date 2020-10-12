@@ -15,7 +15,8 @@
 
 from typing import Any, Tuple
 
-import geoopt.manifolds.poincare.math as pm
+# import geoopt.manifolds.poincare.math as pm
+import geoopt.manifolds.stereographic.math as pm
 import torch
 import torch.distributions
 from torch import Tensor

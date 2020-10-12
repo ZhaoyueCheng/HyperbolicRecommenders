@@ -216,3 +216,95 @@ def validate(model, loader, data_te, topk=[100], show_progress=False, report_cov
         n_items = batch.size()[1]
         results.update({metric: len(inds)/n_items for metric, inds in coverage_set.items()})
     return results
+
+def evaluate_new(loader, train_mat, eval_data, model, variational=True, show_progress=False):
+    model.eval()
+    if show_progress:
+        loader = tqdm(loader)
+
+    pred_matrix = predict_new(loader, train_mat, model, variational)
+    precision, recall, ndcg = eval_rec(train_mat, eval_data, pred_matrix)
+
+    print("------------------------")
+    print("Recall: ")
+    print(recall)
+    print("NDCG: ")
+    print(ndcg)
+
+
+def predict_new(loader, train_mat, model, variational):
+    num_users, num_items = train_mat.shape[0], train_mat.shape[1]
+    probs_matrix = np.zeros((num_users, num_items))
+
+    for i, batch in enumerate(loader):
+        dense_batch = batch.to_dense()
+        with torch.no_grad():
+            predictions = model(dense_batch)
+
+        if variational:
+            predictions = predictions[2].detach().cpu().numpy()
+
+        probs_matrix[i] = np.reshape(predictions, [-1, ])
+
+    return probs_matrix
+
+def eval_rec(train_mat, eval_data, pred_matrix):
+    topk = 50
+    pred_matrix[train_mat.nonzero()] = np.NINF
+    ind = np.argpartition(pred_matrix, -topk)
+    ind = ind[:, -topk:]
+    arr_ind = pred_matrix[np.arange(len(pred_matrix))[:, None], ind]
+    arr_ind_argsort = np.argsort(arr_ind)[np.arange(len(pred_matrix)), ::-1]
+    pred_list = ind[np.arange(len(pred_matrix))[:, None], arr_ind_argsort]
+
+    precision, recall, MAP, ndcg = [], [], [], []
+
+    # ranking = argmax_top_k(pred_matrix, topk)  # Top-K items
+
+    for k in [5, 10, 20]:
+        precision.append(precision_at_k(eval_data, pred_list, k))
+        recall.append(recall_at_k(eval_data, pred_list, k))
+        # MAP.append(mapk(data.test_dict, pred_list, k))
+
+    all_ndcg = ndcg_lgcn([*eval_data.values()], pred_list)
+    ndcg = [all_ndcg[x - 1] for x in [5, 10, 20]]
+
+    return precision, recall, ndcg
+
+def precision_at_k(actual, predicted, topk):
+    sum_precision = 0.0
+    num_users = len(actual)
+    for i, v in actual.items():
+        act_set = set(v)
+        pred_set = set(predicted[i][:topk])
+        sum_precision += len(act_set & pred_set) / float(topk)
+    return sum_precision / num_users
+
+def recall_at_k(actual, predicted, topk):
+    sum_recall = 0.0
+    num_users = len(actual)
+    true_users = 0
+    for i, v in actual.items():
+        act_set = set(v)
+        pred_set = set(predicted[i][:topk])
+        if len(act_set) != 0:
+            sum_recall += len(act_set & pred_set) / float(len(act_set))
+            true_users += 1
+    assert num_users == true_users
+    return sum_recall / true_users
+
+def ndcg_lgcn(ground_truths, ranks):
+    result = 0
+    for i, (rank, ground_truth) in enumerate(zip(ranks, ground_truths)):
+        len_rank = len(rank)
+        len_gt = len(ground_truth)
+        idcg_len = min(len_gt, len_rank)
+
+        # calculate idcg
+        idcg = np.cumsum(1.0 / np.log2(np.arange(2, len_rank + 2)))
+        idcg[idcg_len:] = idcg[idcg_len-1]
+
+        # idcg = np.cumsum(1.0/np.log2(np.arange(2, len_rank+2)))
+        dcg = np.cumsum([1.0/np.log2(idx+2) if item in ground_truth else 0.0 for idx, item in enumerate(rank)])
+        result += dcg / idcg
+    return result / len(ranks)

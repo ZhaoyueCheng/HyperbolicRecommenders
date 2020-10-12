@@ -275,7 +275,7 @@ class UserBatchDataset(ObservationsDatasetBase):
     '''
     def __init__(self, observations, data, negative_samples, batch_size, shuffle, seed, sparse_batch=True):
         if data is not None:
-            raise NotImplementedErorr
+            raise NotImplementedError
         if negative_samples:
             raise ValueError('Negative sampling is not performed for batch models')
         

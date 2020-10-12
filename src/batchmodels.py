@@ -5,7 +5,7 @@ from sklearn.utils.extmath import randomized_svd
 import torch
 import geoopt
 import torch.nn as nn
-from hyptorch.nn import HypLinear
+from .hyptorch.nn import HypLinear
 
 from .mobius_linear import MobiusLinear
 

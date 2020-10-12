@@ -10,9 +10,11 @@ import sys
 import importlib.util
 
 from .vae_utils import CurvatureOptimizer
-from ..recvae import validate, get_data, data_folder_path
+from ..recvae import validate, get_data, data_folder_path, evaluate_new
 from ..datasets import observations_loader, UserBatchDataset
-from ..datareader import read_data
+from ..datareader import read_data, read_data_new
+
+from tqdm import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -85,7 +87,48 @@ class HypVaeDataset(VaeDataset):
         return train_loader, test_loader
 
     def reconstruction_loss(self, x_mb_: torch.Tensor, x_mb: torch.Tensor) -> torch.Tensor:
-        return F.binary_cross_entropy_with_logits(x_mb_, x_mb, reduction="none")        
+        return F.binary_cross_entropy_with_logits(x_mb_, x_mb, reduction="none")
+
+
+class HypVaeDatasetNew(VaeDataset):
+    def __init__(self, batch_size: int, batch_size_eval: int) -> None:
+        super().__init__(batch_size, in_dim=50, img_dims=None)
+        self.n_items = 0
+
+    def create_loaders(self, data_dir, batch_size, batch_size_eval) -> Tuple[DataLoader, DataLoader]:
+
+        self.batch_size = batch_size
+        self.batch_size_eval = batch_size_eval
+
+        train_mat_val, test_mat, train_items, test_items = read_data_new("./data/Amazon-CD/")
+
+        n_items = train_mat_val.shape[1]
+        self.n_items = n_items
+        self.train_mat = train_mat_val
+        self.valid_mat = test_mat
+        self.valid_dict = test_items
+
+        train_loader = observations_loader(
+            observations=train_mat_val,
+            batch_size=self.batch_size,
+            shuffle=True,  # return user batches in random order
+            data_factory=UserBatchDataset,
+            sparse_batch=True  # can use .to_dense on a batch for calculations
+        )
+
+        test_loader = observations_loader(
+            # data for generating predictions
+            observations=train_mat_val,
+            batch_size=1,
+            shuffle=False,
+            data_factory=UserBatchDataset,
+            sparse_batch=True,
+        )
+
+        return train_loader, test_loader
+
+    def reconstruction_loss(self, x_mb_: torch.Tensor, x_mb: torch.Tensor) -> torch.Tensor:
+        return F.binary_cross_entropy_with_logits(x_mb_, x_mb, reduction="none")
 
 
 class Trainer:
@@ -117,8 +160,11 @@ class Trainer:
         
         net_optimizer = torch.optim.Adam(net_params, lr=learning_rate)
         if not self.fixed_curvature and not curv_params:
-            warnings.warn("Fixed curvature disabled, but found no curvature parameters. Did you mean to set "
+            # warnings.warn("Fixed curvature disabled, but found no curvature parameters. Did you mean to set "
+            #               "fixed=True, or not?")
+            print("Fixed curvature disabled, but found no curvature parameters. Did you mean to set "
                           "fixed=True, or not?")
+
         if not pos_curv_params:
             c_opt_pos = None
         else:
@@ -167,4 +213,11 @@ class Trainer:
         self.model.eval()
         return validate(self.model, valid_loader, valid_data,
                                topk=topk, show_progress=show_progress, variational=True)
+
+    def evaluate_new(self, valid_loader, train_mat, eval_data, variational, show_progress):
+        self.model.eval()
+        evaluate_new(valid_loader, train_mat, eval_data, self.model, variational, show_progress)
+
+
+
 

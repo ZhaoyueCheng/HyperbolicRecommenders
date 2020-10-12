@@ -2,6 +2,9 @@ import os
 from src.urm import generate_urm_experiment_data, read_urm_data
 from src.persdiff import generate_persdiff_experiment_data
 
+import pickle
+import scipy.sparse as sp
+import numpy as np
 
 def read_data(data_dir, datapack, dataname, *, n_negative_samples=None, preserve_order=False, seed_val=None, seed_test=None):
     if datapack == "persdiff":
@@ -43,3 +46,49 @@ def read_data(data_dir, datapack, dataname, *, n_negative_samples=None, preserve
             )
     
     raise ValueError("Unrecognized datapack or dataname")
+
+def read_data_new(path):
+
+    train_file = path + '/train.pkl'
+    test_file = path + '/test.pkl'
+
+    train_items = pickle.load(open(train_file, 'rb'))
+    test_items = pickle.load(open(test_file, 'rb'))
+
+    train_new = []
+    for user, items in train_items.items():
+        for item in items:
+            train_new.append([user, item])
+    train = np.array(train_new).astype(int)
+
+    n_users = np.max(train[:, 0])
+    n_items = np.max(train[:, 1])
+    n_train = train.shape[0]
+
+    test_new = []
+    for user, items in test_items.items():
+        for item in items:
+            test_new.append([user, item])
+    test = np.array(test_new).astype(int)
+
+    n_users = max(n_users, np.max(test[:, 0])) + 1
+    n_items = max(n_items, np.max(test[:, 1])) + 1
+    n_test = test.shape[0]
+
+    R = sp.dok_matrix((n_users, n_items), dtype=np.float32)
+
+    for user, item in train:
+        R[user, item] = 1.
+
+    train_matrix = R.tocsr()
+
+    R_test = sp.dok_matrix((n_users, n_items), dtype=np.float32)
+
+    for user, item in test:
+        R_test[user, item] = 1.
+
+    test_matrix = R_test.tocsr()
+
+    print("Done loading data")
+
+    return train_matrix, test_matrix, train_items, test_items

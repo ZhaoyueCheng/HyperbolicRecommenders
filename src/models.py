@@ -7,7 +7,7 @@ import torch.nn as nn
 import geoopt
 import torch
 
-from hyptorch.nn import HyperbolicDistanceLayer, ConcatPoincareLayer, HypLinear, HyperbolicMLR, ToPoincare
+from .hyptorch.nn import HyperbolicDistanceLayer, ConcatPoincareLayer, HypLinear, HyperbolicMLR, ToPoincare
 
 
 class PureSVD:
