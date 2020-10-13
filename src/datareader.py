@@ -89,6 +89,6 @@ def read_data_new(path):
 
     test_matrix = R_test.tocsr()
 
-    print("Done loading data")
+    print("Done loading data, num_users, num_items: ", n_users, n_items)
 
     return train_matrix, test_matrix, train_items, test_items

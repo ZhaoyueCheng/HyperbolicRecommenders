@@ -100,7 +100,7 @@ class HypVaeDatasetNew(VaeDataset):
         self.batch_size = batch_size
         self.batch_size_eval = batch_size_eval
 
-        train_mat_val, test_mat, train_items, test_items = read_data_new("./data/Amazon-CD/")
+        train_mat_val, test_mat, train_items, test_items = read_data_new(data_dir)
 
         n_items = train_mat_val.shape[1]
         self.n_items = n_items

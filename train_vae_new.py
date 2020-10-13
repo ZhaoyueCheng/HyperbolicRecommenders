@@ -27,16 +27,16 @@ from src.random import random_seeds, fix_torch_seed
 parser = argparse.ArgumentParser()
 parser.add_argument("--datapack", type=str, choices=["recvae", "urm"])
 parser.add_argument("--dataname", type=str,)  # depends on choice of data pack
-parser.add_argument("--data_dir", type=str, default="./data/")
-parser.add_argument("--batch_size", type=int, default=512)
+parser.add_argument("--data_dir", type=str, default="./data/Amazon-Book/")
+parser.add_argument("--batch_size", type=int, default=4)
 parser.add_argument("--batch_size_eval", type=int, default=1)
 parser.add_argument('--learning_rate', type=float, default=1e-3)
-parser.add_argument('--epochs', type=int, default=50)
+parser.add_argument('--epochs', type=int, default=500)
 parser.add_argument("--gamma", type=float, default=0.7)
 parser.add_argument("--step_size", type=int, default=7)
 parser.add_argument("--scheduler", default=True, action='store_true')
 parser.add_argument("--seed", type=int, default=42)
-parser.add_argument("--embedding_dim", type=int, default=128)
+parser.add_argument("--embedding_dim", type=int, default=600)
 parser.add_argument("--dropout", type=float, default=0.5)
 parser.add_argument("--c", type=float, default=0.005)
 parser.add_argument('--model', type=str, default="e200", help="Model latent space description.")
@@ -46,7 +46,7 @@ parser.add_argument('--total_anneal_steps', type=int, default=200000,
                     help='the total number of gradient updates for annealing')
 parser.add_argument('--anneal_cap', type=float, default=0.2,
                     help='largest annealing parameter')
-parser.add_argument("--show_progress", default=True, action='store_true')
+parser.add_argument("--show_progress", default=True)
 parser.add_argument("--multilayer", default=False, action='store_true')
 args = parser.parse_args()
 
@@ -75,13 +75,12 @@ fix_torch_seed(args.seed)
 
 data_dir, data_pack, data_name = args.data_dir, args.datapack, args.dataname
 dataset = HypVaeDatasetNew(batch_size=args.batch_size,
-                        batch_size_eval=args.batch_size_eval
-                        )
+                           batch_size_eval=args.batch_size_eval)
 
 print("LOADED DATA")
 
 # train, val, test loaders
-train_loader, valid_loader = dataset.create_loaders(data_dir,
+train_loader, valid_loader = dataset.create_loaders(data_dir=args.data_dir,
                                                     batch_size=args.batch_size,
                                                     batch_size_eval=args.batch_size_eval)
 ###model

@@ -31,7 +31,7 @@ parser.add_argument("--dataname", type=str) # depends on choice of data pack
 parser.add_argument("--batch_size", type=int, default=4)
 parser.add_argument("--test_negative_samples", type=int, default=999)
 parser.add_argument("--learning_rate", type=float, default=0.001)
-parser.add_argument("--embedding_dim", type=int, default=128)
+parser.add_argument("--embedding_dim", type=int, default=256)
 parser.add_argument("--hidden_dim_factor", type=int, default=2)
 parser.add_argument("--num_encoders", type=int, default=1)
 parser.add_argument("--c", type=float, default=0.5)
@@ -43,7 +43,7 @@ parser.add_argument("--loss", type=str, default="mse", choices=["mse", "bce"])
 parser.add_argument("--show-progress", default=True)
 parser.add_argument("--activation", default="no", choices=["tanh", "relu", "no"])
 parser.add_argument("--model", default="hyplinear", choices=["hyplinear", "mobius", "linear"])
-parser.add_argument("--data_dir", default="./data/")
+parser.add_argument("--data_dir", default="./data/Amazon-Book/")
 parser.add_argument("--no-coverage", default=False, action='store_true')
 # wandb compatibility
 parser.add_argument("--bias", type=str, default="True")
@@ -76,7 +76,7 @@ fix_torch_seed(args.seed)
 #     seed_test = rand_seed_test
 # )
 
-train_mat_val, test_mat, train_items, test_items = read_data_new("./data/Amazon-CD/")
+train_mat_val, test_mat, train_items, test_items = read_data_new(args.data_dir)
 
 train_loader = observations_loader(
     observations = train_mat_val,
@@ -160,7 +160,7 @@ show_progress = args.show_progress
 
 for epoch in range(args.epochs):
     losses = train(train_loader, model, optimizer, criterion,
-                   masked_loss=masked_loss, show_progress=show_progress)
+                   masked_loss=masked_loss, show_progress=False)
 
     if (epoch + 1) % 20 == 0:
         print('epoch: ', epoch)
